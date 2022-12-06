@@ -1,10 +1,40 @@
 ﻿using System.Text;
+using AdventOfCode2022.Interfaces;
 
-namespace AdventOfCode2022.Elves;
+namespace AdventOfCode2022.Solvers;
 
-public static class CleanupCalculator
+public class Day4Solver : ISolver
 {
-    private record Diapason
+    private const char PairSeparator = ',';
+    private const char DiapasonSeparator = '-';
+
+    private readonly IEnumerable<string> data;
+
+    public Day4Solver(IEnumerable<string> data)
+        => this.data = data ?? throw new ArgumentNullException(nameof(data));
+
+    public string PartOne()
+        => Calculate((d1, d2) => d1.Include(d2)).ToString();
+    
+    public string PartTwo()
+        => Calculate((d1, d2) => d1.Intersection(d2)).ToString();
+
+    private int Calculate(Func<Diapason, Diapason, bool> func)
+    {
+        var result = 0;
+        foreach (var pairs in data)
+        {
+            var (diapason1, diapason2) = Diapason.MakeDiapasonPair(pairs);
+            if (func(diapason1, diapason2))
+            {
+                result++;
+            }
+        }
+
+        return result;
+    }
+    
+    private readonly struct Diapason
     {
         private int Start { get; }
 
@@ -12,14 +42,14 @@ public static class CleanupCalculator
         
         private int Length => End - Start;
 
-        public static (Diapason, Diapason) MakeDiapasonPair(string str)
+        public static (Diapason, Diapason)MakeDiapasonPair(string str)
         {
             var pairValues = str.Split(PairSeparator);
 
             return (new Diapason(pairValues[0]), new Diapason(pairValues[1]));
         }
 
-        private Diapason (string str)
+        private Diapason(string str)
         {
             if (string.IsNullOrWhiteSpace(str))
             {
@@ -67,21 +97,10 @@ public static class CleanupCalculator
                    || End >= other.Start && End <= other.End;
         }
 
-        public static bool operator <=(Diapason self, Diapason other)
-        {
-            if (!ReferenceEquals(self, other))
-            {
-                return self.Length <= other.Length;
-            }
-
-            return true;
-        }
-
-        public static bool operator >=(Diapason self, Diapason other)
-        {
-            return !(self <= other);
-        }
-
+        public static bool operator <=(Diapason self, Diapason other) => self.Length <= other.Length;
+      
+        public static bool operator >=(Diapason self, Diapason other) => !(self <= other);
+        
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -100,31 +119,5 @@ public static class CleanupCalculator
 
             return sb.ToString();
         }
-    }
-    
-    private const string CleanupData = @"Data/Cleanup.txt";
-    private const char PairSeparator = ',';
-    private const char DiapasonSeparator = '-';
-    private static readonly string[] Data = File.ReadAllLines(CleanupData);
-
-    public static int CalculateIncludes()
-        => Calculate((d1, d2) => d1.Include(d2));
-    
-    public static int CalculateOverlapped()
-        => Calculate((d1, d2) => d1.Intersection(d2));
-
-    private static int Calculate(Func<Diapason, Diapason, bool> func)
-    {
-        var result = 0;
-        foreach (var pairs in Data)
-        {
-            var (diapason1, diapason2) = Diapason.MakeDiapasonPair(pairs);
-            if (func(diapason1, diapason2))
-            {
-                result++;
-            }
-        }
-
-        return result;
     }
 }

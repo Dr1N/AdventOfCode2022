@@ -1,30 +1,34 @@
-﻿namespace AdventOfCode2022.Elves;
+﻿using AdventOfCode2022.Interfaces;
 
-public static class RucksackCalculator
+namespace AdventOfCode2022.Solvers;
+
+public class Day3Solver : ISolver
 {
-    private const string Rucksack = @"Data/Rucksack.txt";
     private const string ItemsCodes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static readonly Dictionary<char, int> Priors = 
+    private static readonly IReadOnlyDictionary<char, int> ItemPriorities = 
         ItemsCodes.ToDictionary(e => e, e => ItemsCodes.IndexOf(e) + 1);
 
-    public static int Calculate()
+    private readonly IEnumerable<string> data;
+
+    public Day3Solver(IEnumerable<string> data) =>
+        this.data = data ?? throw new ArgumentNullException(nameof(data));
+
+    public string PartOne()
     {
-        var data = File.ReadAllLines(Rucksack);
         var result = 0;
         foreach (var rucksack in data)
         {
             var compartemtOneSet = new HashSet<char>(rucksack[..(rucksack.Length / 2)]);
             var compartemtTwoSet = new HashSet<char>(rucksack[(rucksack.Length / 2)..]);
             compartemtOneSet.IntersectWith(compartemtTwoSet);
-            result += compartemtOneSet.Select(e => Priors[e]).Sum();
+            result += compartemtOneSet.Select(e => ItemPriorities[e]).Sum();
         }
         
-        return result;
+        return result.ToString();
     }
 
-    public static int CalculateGroups()
+    public string PartTwo()
     {
-        var data = File.ReadAllLines(Rucksack);
         var result = 0;
         foreach (var group in data.Chunk(3))
         {
@@ -35,9 +39,9 @@ public static class RucksackCalculator
             set1.IntersectWith(set2);
             set1.IntersectWith(set3);
 
-            result += Priors[set1.First()];
+            result += ItemPriorities[set1.First()];
         }
 
-        return result;
+        return result.ToString();
     }
 }
