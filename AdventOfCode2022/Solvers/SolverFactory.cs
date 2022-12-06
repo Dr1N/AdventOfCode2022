@@ -9,10 +9,8 @@ public class SolverFactory : ISolverFactory
     private readonly IDataProvider dataProvider;
 
     public SolverFactory(IDataProvider dataProvider)
-    {
-        this.dataProvider = dataProvider ?? throw new ArgumentNullException(nameof(dataProvider));
-    }
-
+        => this.dataProvider = dataProvider ?? throw new ArgumentNullException(nameof(dataProvider));
+    
     public ISolver CreateSolver(int day)
     {
         DayHelper.CheckDay(day);
