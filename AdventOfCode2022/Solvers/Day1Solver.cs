@@ -9,8 +9,8 @@ public class Day1Solver : ISolver
 
     private IEnumerable<int> ElvesCalories => calories ??= CalculateElvesCalories();
 
-    public Day1Solver(IEnumerable<string> data) =>
-        this.data = data ?? throw new ArgumentNullException(nameof(data));
+    public Day1Solver(IEnumerable<string> data)
+        => this.data = data ?? throw new ArgumentNullException(nameof(data));
 
     public string PartOne() => ElvesCalories
         .Max()

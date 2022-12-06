@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using AdventOfCode2022.Interfaces;
 
 namespace AdventOfCode2022.Solvers;
@@ -20,15 +19,13 @@ public class Day5Solver : ISolver
 {
     private readonly IEnumerable<string> data;
     
-    public Day5Solver(IEnumerable<string> data)
-    {
-        this.data = data ?? throw new ArgumentNullException(nameof(data));
-    }
-
+    public Day5Solver(IEnumerable<string> data) 
+        => this.data = data ?? throw new ArgumentNullException(nameof(data));
+   
     public string PartOne()
     {
         var supply = new Supply();
-
+        
         return DoWork(supply, supply.Use9000Crane);
     }
 

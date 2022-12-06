@@ -10,8 +10,8 @@ public class Day3Solver : ISolver
 
     private readonly IEnumerable<string> data;
 
-    public Day3Solver(IEnumerable<string> data) =>
-        this.data = data ?? throw new ArgumentNullException(nameof(data));
+    public Day3Solver(IEnumerable<string> data)
+        => this.data = data ?? throw new ArgumentNullException(nameof(data));
 
     public string PartOne()
     {

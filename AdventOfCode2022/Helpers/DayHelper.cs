@@ -10,7 +10,7 @@ public static class DayHelper
         if (!IsValid(day))
         {
             throw new ArgumentException(
-                $"Invalid day. {nameof(day)} must be greater than 0 and less or equal than {DayHelper.MaxDay}");
+                $"Invalid day. {nameof(day)} must be greater than 0 and less or equal than {MaxDay}");
         }
     }
 

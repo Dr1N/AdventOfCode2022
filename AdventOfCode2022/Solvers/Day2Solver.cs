@@ -42,8 +42,8 @@ public class Day2Solver : ISolver
 
     private readonly IEnumerable<string> data;
 
-    public Day2Solver(IEnumerable<string> data) => 
-        this.data = data ?? throw new ArgumentNullException(nameof(data));
+    public Day2Solver(IEnumerable<string> data)
+        => this.data = data ?? throw new ArgumentNullException(nameof(data));
     
     public string PartOne() => 
         data.Sum(game => gameScores[game])
