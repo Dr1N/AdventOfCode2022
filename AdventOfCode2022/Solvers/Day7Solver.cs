@@ -12,7 +12,7 @@ public class Day7Solver : ISolver
     private const string DirectoryListPrefix = "dir";
     
     private readonly IEnumerable<string> data;
-    private readonly Stack<string> currentPathDictionaries = new();
+    private readonly Stack<string> currentPathDirectories = new();
 
     public Day7Solver(IEnumerable<string> data)
     {
@@ -22,12 +22,15 @@ public class Day7Solver : ISolver
 
     public string PartOne()
     {
-        var sizes = CalculateDirectoriesSizes(data);
-        var sorted = CalculateSubfolders(sizes);
+        const long sizeTheshhold = 100_000;
+        var directoriesSizes = CalculateDirectoriesSizes(data);
+        var withSubfolders = CalculateSubfolders(directoriesSizes);
         
-        Console.WriteLine(GetDirectorySizes(sorted));
+        var result = withSubfolders.Values
+            .Where(e => e < sizeTheshhold)
+            .Sum();
         
-        return string.Empty;
+        return result.ToString();
     }
 
     public string PartTwo()
@@ -37,41 +40,35 @@ public class Day7Solver : ISolver
 
     private Dictionary<string, long> CalculateDirectoriesSizes(IEnumerable<string> consoleInputOutput)
     {
-        var result = new Dictionary<string, long>();
-        var isList = false;
+        var result = new Dictionary<string, long>() {{"/", 0}};
         foreach (var line in consoleInputOutput)
         {
             // Change dir
             if (line.StartsWith(ChangeDirectoryCommand))
             {
-                isList = false;
                 ChangeDirectory(line);
                 continue;
             }
 
-            // Show dir content
-            if (line == ListCommand)
-            {
-                isList = true;
-                continue;
-            }
+            // Show dir content - skip
+            if (line == ListCommand) continue;
             
-            // Skip directory
-            if (!isList || line.StartsWith(DirectoryListPrefix)) continue;
+            // Add directory to dictionary
+            if (line.StartsWith(DirectoryListPrefix))
+            {
+                var dir = line.Split(' ')[1];
+                var separator = CurrentDirectory().EndsWith('/') 
+                    ? string.Empty
+                    : new string(DirectorySeparator, 1);
+                result.Add(CurrentDirectory() + separator + dir, 0);
+                continue;
+            };
            
             // Calculate file sizes in current directory
             var fileSize = long.Parse(line.Split(' ')[0]);
             
             // Save file sizes for directory
-            var currentDir = CurrentDirectory();
-            if (result.ContainsKey(currentDir))
-            {
-                result[currentDir] += fileSize;
-            }
-            else
-            {
-                result.Add(currentDir, fileSize);
-            }
+            result[CurrentDirectory()] += fileSize;
         }
 
         return result;
@@ -79,12 +76,25 @@ public class Day7Solver : ISolver
 
     private static Dictionary<string, long> CalculateSubfolders(Dictionary<string, long> directoriesSizes)
     {
-        var sorter = directoriesSizes
+        var sorted = directoriesSizes
             .OrderBy(e => e.Key)
             .ThenBy(e => e.Key.Length)
             .ToDictionary(e => e.Key, v => v.Value);
-
-        return sorter;
+        
+        foreach (var (target, _) in sorted)
+        {
+            foreach (var (inner, size) in sorted)
+            {
+                if (inner == target) continue;
+                
+                if (inner.StartsWith(target))
+                {
+                    sorted[target] += size;
+                }
+            }
+        }
+        
+        return sorted;
     }
     
     private void ChangeDirectory(string line)
@@ -92,22 +102,22 @@ public class Day7Solver : ISolver
         var commandArgument = line.Split(' ')[2];
         if (commandArgument == UpCommandArgument)
         {
-            currentPathDictionaries.Pop();
+            currentPathDirectories.Pop();
         }
         else
         {
-            currentPathDictionaries.Push(commandArgument);
+            currentPathDirectories.Push(commandArgument);
         }
     }
     
     private string CurrentDirectory()
     {
-        if (currentPathDictionaries.Count == 0)
+        if (currentPathDirectories.Count == 0)
         {
             return string.Empty;
         }
 
-        var currentDirectories = new List<string>(currentPathDictionaries);
+        var currentDirectories = new List<string>(currentPathDirectories);
         currentDirectories.Reverse();
         if (currentDirectories.Count == 1)
         {
