@@ -1,5 +1,4 @@
-﻿using System.Text;
-using AdventOfCode2022.Interfaces;
+﻿using AdventOfCode2022.Interfaces;
 
 namespace AdventOfCode2022.Solvers;
 
@@ -23,10 +22,11 @@ public class Day7Solver : ISolver
     public string PartOne()
     {
         const long sizeTheshhold = 100_000;
+
+        currentPathDirectories.Clear();
         var directoriesSizes = CalculateDirectoriesSizes(data);
-        var withSubfolders = CalculateSubfolders(directoriesSizes);
         
-        var result = withSubfolders.Values
+        var result = directoriesSizes.Values
             .Where(e => e < sizeTheshhold)
             .Sum();
         
@@ -35,7 +35,21 @@ public class Day7Solver : ISolver
 
     public string PartTwo()
     {
-        throw new NotImplementedException();
+        currentPathDirectories.Clear();
+        
+        const int totalSpase = 70_000_000;
+        const int needSpase = 30_000_000;
+        
+        var directoriesSizes = CalculateDirectoriesSizes(data);
+        var totalFileSizes = directoriesSizes["/"];
+        var currentFreeSpace = totalSpase - totalFileSizes;
+        var neededSpace = needSpase - currentFreeSpace;
+
+        var result = directoriesSizes.Values
+            .Where(e => e >= neededSpace)
+            .Min();
+        
+        return result.ToString();
     }
 
     private Dictionary<string, long> CalculateDirectoriesSizes(IEnumerable<string> consoleInputOutput)
@@ -43,7 +57,7 @@ public class Day7Solver : ISolver
         var result = new Dictionary<string, long>() {{"/", 0}};
         foreach (var line in consoleInputOutput)
         {
-            // Change dir
+            // Change current dir
             if (line.StartsWith(ChangeDirectoryCommand))
             {
                 ChangeDirectory(line);
@@ -60,9 +74,9 @@ public class Day7Solver : ISolver
                 var separator = CurrentDirectory().EndsWith('/') 
                     ? string.Empty
                     : new string(DirectorySeparator, 1);
-                result.Add(CurrentDirectory() + separator + dir, 0);
+                result.Add($"{CurrentDirectory()}{separator}{dir}", 0);
                 continue;
-            };
+            }
            
             // Calculate file sizes in current directory
             var fileSize = long.Parse(line.Split(' ')[0]);
@@ -71,7 +85,7 @@ public class Day7Solver : ISolver
             result[CurrentDirectory()] += fileSize;
         }
 
-        return result;
+        return CalculateSubfolders(result);
     }
 
     private static Dictionary<string, long> CalculateSubfolders(Dictionary<string, long> directoriesSizes)
@@ -127,21 +141,5 @@ public class Day7Solver : ISolver
         var path = string.Join(DirectorySeparator, currentDirectories)[1..];
                 
         return path;
-    }
-
-    private static string GetDirectorySizes(Dictionary<string,long> directoriesSizes)
-    {
-        if (directoriesSizes.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var sb = new StringBuilder();
-        foreach (var (dir, size) in directoriesSizes)
-        {
-            sb.AppendLine($"{dir} : {size}");
-        }
-
-        return sb.ToString();
     }
 }
