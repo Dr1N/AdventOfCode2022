@@ -48,7 +48,7 @@ public class Day7Solver : ISolver
         return result.ToString();
     }
 
-    private Dictionary<string, long> CalculateDirectoriesSizes(IEnumerable<string> consoleInputOutput)
+    private static Dictionary<string, long> CalculateDirectoriesSizes(IEnumerable<string> consoleInputOutput)
     {
         var currentPathDirectories = new Stack<string>();
         var result = new Dictionary<string, long>() {{"/", 0}};
