@@ -15,23 +15,13 @@ public class Day9Solver : ISolver
 
     public string PartOne()
     {
-        Console.BufferWidth = 400;
-        Console.BufferHeight = 400;
-        Console.Clear();
-        
-        var simmulation = new Simulator();
-        var move = 0;
+        var simulator = new Simulator();
         foreach (var command in data)
         {
-           //Console.Title = (++move).ToString();
-            simmulation.Move(new Simulator.Vector(command));
-            //Console.Clear();
-           //simmulation.PrintConsole();
+            simulator.Move(new Simulator.Vector(command));
         }
 
-        var headCount = simmulation.headPath;
-        var tailCount = simmulation.tailPath;
-        var result = simmulation.tailPath.Distinct().Count();
+        var result = simulator.TailPath.Distinct().Count();
         
         return result.ToString();
     }
@@ -51,6 +41,18 @@ public class Day9Solver : ISolver
     
     private class Simulator
     {
+        private readonly List<Point> headPath = new() { new Point(0, 0) };
+        public readonly List<Point> TailPath = new() { new Point(0, 0) };
+
+        public void Move(Vector vector)
+        {
+            var head = headPath.Last();
+            var tail = TailPath.Last();
+            var (hPath, tPath) = vector.GetPathCoords(head, tail);
+            headPath.AddRange(hPath);
+            TailPath.AddRange(tPath);
+        }
+        
         public record struct Point(int X, int Y);
 
         public readonly struct Vector
@@ -120,53 +122,5 @@ public class Day9Solver : ISolver
             private static double Distance(Point p1, Point p2)
                 => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
         }
-        
-        public readonly List<Point> headPath = new() { new Point(0, 0) };
-        public readonly List<Point> tailPath = new() { new Point(0, 0) };
-
-        private const int OffsetX = 100;
-        private const int OffsetY = 100;
-
-        public void Move(Vector vector)
-        {
-            var head = headPath.Last();
-            var tail = tailPath.Last();
-            var (hPath, tPath) = vector.GetPathCoords(head, tail);
-            headPath.AddRange(hPath);
-            tailPath.AddRange(tPath);
-        }
-
-        public void PrintConsole()
-        {
-            foreach (var (x,y) in headPath)
-            {
-                Console.CursorLeft = x + OffsetX;
-                Console.CursorTop = y + OffsetY;
-                Console.Write("#");
-            }
-            
-            foreach (var (x,y) in tailPath)
-            {
-                Console.CursorLeft = x + OffsetX;
-                Console.CursorTop = y + OffsetY;
-                Console.Write("~");
-            }
-
-            var head = headPath.Last();
-            PrintSymbol(head, 'H', ConsoleColor.Green);
-            
-            var tail = tailPath.Last();
-            PrintSymbol(tail, 'T', ConsoleColor.Red);
-        }
-
-        private void PrintSymbol(Point point, char sym, ConsoleColor consoleColor)
-        {
-            Console.CursorLeft = point.X + OffsetX;
-            Console.CursorTop = point.Y + OffsetY;
-            Console.ForegroundColor = consoleColor;
-            Console.Write(sym);
-            Console.ResetColor();
-        }
     }
 }
-
