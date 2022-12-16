@@ -15,13 +15,25 @@ public class Day9Solver : ISolver
 
     public string PartOne()
     {
-        var simmulation = new Simmulation();
+        Console.BufferWidth = 400;
+        Console.BufferHeight = 400;
+        Console.Clear();
+        
+        var simmulation = new Simulator();
+        var move = 0;
         foreach (var command in data)
         {
-            simmulation.Move(new Vector(command));
+           //Console.Title = (++move).ToString();
+            simmulation.Move(new Simulator.Vector(command));
+            //Console.Clear();
+           //simmulation.PrintConsole();
         }
+
+        var headCount = simmulation.headPath;
+        var tailCount = simmulation.tailPath;
+        var result = simmulation.tailPath.Distinct().Count();
         
-        return string.Empty;
+        return result.ToString();
     }
 
     public string PartTwo()
@@ -37,81 +49,123 @@ public class Day9Solver : ISolver
         Left
     }
     
-    private record struct Point(int X, int Y);
-
-    private readonly record struct Vector(Direction Direction, int Length)
+    private class Simulator
     {
-        public Vector(string command) : this()
-        {
-            if (string.IsNullOrWhiteSpace(command))
-            {
-                throw new ArgumentNullException(nameof(command));
-            }
-            
-            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var direction = parts[0];
-            
-            Direction = direction switch
-            {
-                "L" => Direction.Left,
-                "R" => Direction.Right,
-                "U" => Direction.Up,
-                "D" => Direction.Down,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            Length = int.Parse(parts[1]);
-        }
+        public record struct Point(int X, int Y);
 
-        public IEnumerable<Point> GetPathCoords(Point startPoint)
+        public readonly struct Vector
         {
-            var result = new List<Point>();
-            for (var i = 0; i < Length; i++)
+            private Direction Direction { get; }
+
+            private int Length { get; }
+
+            public Vector(string command)
             {
-                var (startX, startY) = startPoint;
-                switch (Direction)
+                var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var direction = parts[0];
+                
+                Direction = direction switch
                 {
-                    case Direction.Left:
-                        result.Add(new Point(startX - 1, startY));
-                        break;
-                    case Direction.Right:
-                        result.Add(new Point(startX + 1, startY));
-                        break;
-                    case Direction.Up:
-                        result.Add(new Point(startX, startY - 1));
-                        break;
-                    case Direction.Down:
-                        result.Add(new Point(startX, startY + 1));
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                    "L" => Direction.Left,
+                    "R" => Direction.Right,
+                    "U" => Direction.Up,
+                    "D" => Direction.Down,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                Length = int.Parse(parts[1]);
             }
-            
-            return result;
+
+            public (IEnumerable<Point>, IEnumerable<Point>) GetPathCoords(Point headPoint, Point tailPoint)
+            {
+                var headResult = new List<Point>();
+                var tailResults = new List<Point>();
+                for (var i = 0; i < Length; i++)
+                {
+                    var (startX, startY) = headPoint;
+                    Point nextHeadPoint;
+                    switch (Direction)
+                    {
+                        case Direction.Left:
+                            nextHeadPoint = new Point(startX - 1, startY);
+                            headResult.Add(nextHeadPoint);
+                            break;
+                        case Direction.Right:
+                            nextHeadPoint = new Point(startX + 1, startY);
+                            headResult.Add(nextHeadPoint);
+                            break;
+                        case Direction.Up:
+                            nextHeadPoint = new Point(startX, startY - 1);
+                            headResult.Add(nextHeadPoint);
+                            break;
+                        case Direction.Down:
+                            nextHeadPoint = new Point(startX, startY + 1);
+                            headResult.Add(nextHeadPoint);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                    
+                    var dist = Distance(nextHeadPoint, tailPoint);
+                    if (dist > Math.Sqrt(2))
+                    {
+                        tailResults.Add(headPoint);
+                    }
+                    
+                    headPoint = nextHeadPoint;
+                }
+                
+                return (headResult, tailResults);
+            }
+        
+            private static double Distance(Point p1, Point p2)
+                => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
         }
-    }
-    
-    private class Simmulation
-    {
-        private readonly List<Point> headPath = new() { new Point(0, 0) };
-        private readonly List<Point> tailPath = new() { new Point(0, 0) };
+        
+        public readonly List<Point> headPath = new() { new Point(0, 0) };
+        public readonly List<Point> tailPath = new() { new Point(0, 0) };
+
+        private const int OffsetX = 100;
+        private const int OffsetY = 100;
 
         public void Move(Vector vector)
         {
             var head = headPath.Last();
-            var path = vector.GetPathCoords(head);
-            headPath.AddRange(path);
+            var tail = tailPath.Last();
+            var (hPath, tPath) = vector.GetPathCoords(head, tail);
+            headPath.AddRange(hPath);
+            tailPath.AddRange(tPath);
         }
 
-        private static double Distance(Point p1, Point p2)
-            => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
-        
-        public override string ToString()
+        public void PrintConsole()
         {
-            var head = string.Join("->", headPath);
-            var tail = string.Join("->", headPath);
+            foreach (var (x,y) in headPath)
+            {
+                Console.CursorLeft = x + OffsetX;
+                Console.CursorTop = y + OffsetY;
+                Console.Write("#");
+            }
             
-            return $"Head: {head}{Environment.NewLine}{tail}";
+            foreach (var (x,y) in tailPath)
+            {
+                Console.CursorLeft = x + OffsetX;
+                Console.CursorTop = y + OffsetY;
+                Console.Write("~");
+            }
+
+            var head = headPath.Last();
+            PrintSymbol(head, 'H', ConsoleColor.Green);
+            
+            var tail = tailPath.Last();
+            PrintSymbol(tail, 'T', ConsoleColor.Red);
+        }
+
+        private void PrintSymbol(Point point, char sym, ConsoleColor consoleColor)
+        {
+            Console.CursorLeft = point.X + OffsetX;
+            Console.CursorTop = point.Y + OffsetY;
+            Console.ForegroundColor = consoleColor;
+            Console.Write(sym);
+            Console.ResetColor();
         }
     }
 }
