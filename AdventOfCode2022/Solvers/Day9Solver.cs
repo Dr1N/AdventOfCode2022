@@ -16,9 +16,9 @@ public class Day9Solver : ISolver
     public string PartOne()
     {
         var simmulation = new Simmulation();
-        foreach (var movment in data)
+        foreach (var command in data)
         {
-            simmulation.Move(movment);
+            simmulation.Move(new Vector(command));
         }
         
         return string.Empty;
@@ -29,35 +29,78 @@ public class Day9Solver : ISolver
         return string.Empty;
     }
 
+    private enum Direction
+    {
+        Up,
+        Right,
+        Down,
+        Left
+    }
+    
     private record struct Point(int X, int Y);
+
+    private readonly record struct Vector(Direction Direction, int Length)
+    {
+        public Vector(string command) : this()
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+            
+            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var direction = parts[0];
+            
+            Direction = direction switch
+            {
+                "L" => Direction.Left,
+                "R" => Direction.Right,
+                "U" => Direction.Up,
+                "D" => Direction.Down,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+            Length = int.Parse(parts[1]);
+        }
+
+        public IEnumerable<Point> GetPathCoords(Point startPoint)
+        {
+            var result = new List<Point>();
+            for (var i = 0; i < Length; i++)
+            {
+                var (startX, startY) = startPoint;
+                switch (Direction)
+                {
+                    case Direction.Left:
+                        result.Add(new Point(startX - 1, startY));
+                        break;
+                    case Direction.Right:
+                        result.Add(new Point(startX + 1, startY));
+                        break;
+                    case Direction.Up:
+                        result.Add(new Point(startX, startY - 1));
+                        break;
+                    case Direction.Down:
+                        result.Add(new Point(startX, startY + 1));
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            
+            return result;
+        }
+    }
     
     private class Simmulation
     {
         private readonly List<Point> headPath = new() { new Point(0, 0) };
         private readonly List<Point> tailPath = new() { new Point(0, 0) };
 
-        public void Move(string command)
+        public void Move(Vector vector)
         {
-            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var direction = parts[0];
-            var length = int.Parse(parts[1]);
-
-            for (var i = 0; i < length; i++)
-            {
-                switch (direction)
-                {
-                    case "L":
-                        break;
-                    case "R":
-                        break;
-                    case "U":
-                        break;
-                    case "D":
-                        break;
-                    default:
-                        throw new InvalidOperationException();
-                }
-            }
+            var head = headPath.Last();
+            var path = vector.GetPathCoords(head);
+            headPath.AddRange(path);
         }
 
         private static double Distance(Point p1, Point p2)
@@ -72,3 +115,4 @@ public class Day9Solver : ISolver
         }
     }
 }
+
