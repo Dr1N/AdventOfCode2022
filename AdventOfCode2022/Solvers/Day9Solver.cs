@@ -21,6 +21,8 @@ public class Day9Solver : ISolver
             simulator.Move(new Vector(command));
         }
         
+        //simulator.Play(60);
+        
         return simulator.LastPartPointCount.ToString();
     }
 
@@ -53,23 +55,48 @@ public class Day9Solver : ISolver
             for (var i = 0; i < ropeCoords.Count - 1; i++)
             {
                 // First and second coords of rope parts
-                var first = ropeCoords[i];
-                var second = ropeCoords[i + 1];
+                var current = ropeCoords[i];
+                var next = ropeCoords[i + 1];
                 
                 // Current coordinates of rope parts
-                var firstPosition = first.Last();
-                var secondPosition = second.Last();
+                var currentPosition = current.Last();
+                var nextPosition = next.Last();
                 
                 // Path parts after movement by vector
-                var (firstPathCoords, secondPathCoords)
-                    = GetPathCoords(vector, firstPosition, secondPosition);
+                var (currentPathCoords, nextPathCoords)
+                    = GetPathCoords(vector, currentPosition, nextPosition);
                 
                 // Adding rope parts coordinates
-                first.AddRange(firstPathCoords);
-                second.AddRange(secondPathCoords);
+                current.AddRange(currentPathCoords);
+                next.AddRange(nextPathCoords);
             }
         }
 
+        public void Play(int steps)
+        {
+            const int offsetX = 20;
+            const int offsetY = 10;
+            Console.Clear();
+            Console.CursorVisible = false;
+
+            var head = ropeCoords[0];
+            var next = ropeCoords[1];
+            for (var i = 0; i < steps; i++)
+            {
+                var headPosition = head[i];
+                Console.CursorLeft = headPosition.X + offsetX;
+                Console.CursorTop = headPosition.Y + offsetY;
+                Console.Write("H");
+                
+                var nextPosition = next[i];
+                Console.CursorLeft = nextPosition.X + offsetX;
+                Console.CursorTop = nextPosition.Y + offsetY;
+                Console.Write("1");
+            }
+            
+            Console.CursorVisible = true;
+        }
+        
         private static (IEnumerable<Point>, IEnumerable<Point>) GetPathCoords(
             Vector vector,
             Point basePoint,
