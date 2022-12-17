@@ -15,22 +15,90 @@ public class Day9Solver : ISolver
 
     public string PartOne()
     {
-        var simulator = new Simulator();
+        var simulator = new RopeSimulator(2);
         foreach (var command in data)
         {
-            simulator.Move(new Simulator.Vector(command));
+            simulator.Move(new Vector(command));
         }
-
-        var result = simulator.TailPath.Distinct().Count();
         
-        return result.ToString();
+        return simulator.LastPartPointCount.ToString();
     }
 
     public string PartTwo()
     {
-        return string.Empty;
+        var simulator = new RopeSimulator(10);
+        foreach (var command in data)
+        {
+            simulator.Move(new Vector(command));
+        }
+        
+        return simulator.LastPartPointCount.ToString();
     }
 
+    private class RopeSimulator
+    {
+        private readonly List<List<Point>> ropeCoords;
+        
+        public int LastPartPointCount => ropeCoords
+            .Last()
+            .Distinct()
+            .Count();
+
+        public RopeSimulator(int ropeParts)
+        {
+            ropeCoords = new List<List<Point>>();
+            for (var i = 0; i < ropeParts; i++)
+            {
+                ropeCoords.Add(new List<Point> {new(0, 0)});
+            }
+        }
+        
+        public void Move(Vector vector)
+        {
+            for (var i = 0; i < ropeCoords.Count - 1; i++)
+            {
+                var first = ropeCoords[i];
+                var second = ropeCoords[i + 1];
+                var (f, s) = GetPairCoords(vector, first.Last(), second.Last());
+                first.AddRange(f);
+                second.AddRange(s);
+            }
+        }
+
+        private static (IEnumerable<Point>, IEnumerable<Point>) GetPairCoords(Vector vector, Point first, Point second)
+        {
+            var firstPath = new List<Point>();
+            var secondPath = new List<Point>();
+            for (var i = 0; i < vector.Length; i++)
+            {
+                var (startX, startY) = first;
+                var nextFirstPoint = vector.Direction switch
+                {
+                    Direction.Left => new Point(startX - 1, startY),
+                    Direction.Right => new Point(startX + 1, startY),
+                    Direction.Up => new Point(startX, startY - 1),
+                    Direction.Down => new Point(startX, startY + 1),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                firstPath.Add(nextFirstPoint);
+                
+                var dist = Distance(nextFirstPoint, second);
+                if (dist > Math.Sqrt(2))
+                {
+                    secondPath.Add(first);
+                }
+                
+                first = nextFirstPoint;
+            }
+            
+            return (firstPath, secondPath);
+        }
+
+        private static double Distance(Point p1, Point p2)
+            => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+    }
+    
     private enum Direction
     {
         Up,
@@ -39,88 +107,28 @@ public class Day9Solver : ISolver
         Left
     }
     
-    private class Simulator
+    private readonly record struct Point(int X, int Y);
+
+    private readonly record struct Vector
     {
-        private readonly List<Point> headPath = new() { new Point(0, 0) };
-        public readonly List<Point> TailPath = new() { new Point(0, 0) };
+        public Direction Direction { get; }
 
-        public void Move(Vector vector)
+        public int Length { get; }
+
+        public Vector(string command)
         {
-            var head = headPath.Last();
-            var tail = TailPath.Last();
-            var (hPath, tPath) = vector.GetPathCoords(head, tail);
-            headPath.AddRange(hPath);
-            TailPath.AddRange(tPath);
-        }
-        
-        public record struct Point(int X, int Y);
-
-        public readonly struct Vector
-        {
-            private Direction Direction { get; }
-
-            private int Length { get; }
-
-            public Vector(string command)
+            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var direction = parts[0];
+            
+            Direction = direction switch
             {
-                var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var direction = parts[0];
-                
-                Direction = direction switch
-                {
-                    "L" => Direction.Left,
-                    "R" => Direction.Right,
-                    "U" => Direction.Up,
-                    "D" => Direction.Down,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                Length = int.Parse(parts[1]);
-            }
-
-            public (IEnumerable<Point>, IEnumerable<Point>) GetPathCoords(Point headPoint, Point tailPoint)
-            {
-                var headResult = new List<Point>();
-                var tailResults = new List<Point>();
-                for (var i = 0; i < Length; i++)
-                {
-                    var (startX, startY) = headPoint;
-                    Point nextHeadPoint;
-                    switch (Direction)
-                    {
-                        case Direction.Left:
-                            nextHeadPoint = new Point(startX - 1, startY);
-                            headResult.Add(nextHeadPoint);
-                            break;
-                        case Direction.Right:
-                            nextHeadPoint = new Point(startX + 1, startY);
-                            headResult.Add(nextHeadPoint);
-                            break;
-                        case Direction.Up:
-                            nextHeadPoint = new Point(startX, startY - 1);
-                            headResult.Add(nextHeadPoint);
-                            break;
-                        case Direction.Down:
-                            nextHeadPoint = new Point(startX, startY + 1);
-                            headResult.Add(nextHeadPoint);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                    
-                    var dist = Distance(nextHeadPoint, tailPoint);
-                    if (dist > Math.Sqrt(2))
-                    {
-                        tailResults.Add(headPoint);
-                    }
-                    
-                    headPoint = nextHeadPoint;
-                }
-                
-                return (headResult, tailResults);
-            }
-        
-            private static double Distance(Point p1, Point p2)
-                => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+                "L" => Direction.Left,
+                "R" => Direction.Right,
+                "U" => Direction.Up,
+                "D" => Direction.Down,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+            Length = int.Parse(parts[1]);
         }
     }
 }
