@@ -4,21 +4,19 @@ namespace AdventOfCode2022.Solvers;
 
 public class Day9Solver : ISolver
 {
-    private readonly IEnumerable<string> data;
-    
+    private const int MaxLen = 9;
+    private readonly IEnumerable<Vector> vectors;
+
     public Day9Solver(IEnumerable<string> data)
     {
         ArgumentNullException.ThrowIfNull(data, nameof(data));
-
-        this.data = data;
+        vectors = data
+            .Select(e => new Vector(e))
+            .ToList();
     }
 
     public string PartOne()
     {
-        var vectors = data
-            .Select(e => new Vector(e))
-            .ToList();
-        
         var headWay = RopeSimulator.MoveHead(vectors);
         var tailWay = RopeSimulator.MoveTail(headWay);
         
@@ -27,12 +25,18 @@ public class Day9Solver : ISolver
 
     public string PartTwo()
     {
-        var vectors = data
-            .Select(e => new Vector(e))
-            .ToList();
+        var headWay = new List<Point>();
+        headWay.AddRange(RopeSimulator.MoveHead(vectors));
         
-        var headWay = RopeSimulator.MoveHead(vectors);
-        var tailWay = RopeSimulator.MoveTail(headWay);
+        var tailWay = new List<Point>();
+        for (var i = 0; i < MaxLen; i++)
+        {
+            tailWay.Clear();
+            tailWay.AddRange(RopeSimulator.MoveTail(headWay));
+            
+            headWay.Clear();
+            headWay.AddRange(tailWay);
+        }
         
         return tailWay.Distinct().Count().ToString();
     }
@@ -60,14 +64,14 @@ public class Day9Solver : ISolver
         public static IEnumerable<Point> MoveTail(IEnumerable<Point> headWay)
         {
             var result = new List<Point> { new(0, 0) };
-            foreach (var point in headWay)
+            foreach (var currentHeadPosition in headWay)
             {
-                var lastPosition = result.Last();
-                var realDistance = GetDistance(lastPosition, point);
-                var isBreak = realDistance > BreakDistance;
+                var lastTailPosition = result.Last();
+                var distance = GetDistance(lastTailPosition, currentHeadPosition);
+                var isBreak = distance > BreakDistance;
                 if (!isBreak) continue;
-                var nextPoint = GetNearestPoint(lastPosition,point);
-                result.Add(nextPoint);;
+                var nextTailPosition = GetNearestPoint(lastTailPosition,currentHeadPosition);
+                result.Add(nextTailPosition);;
             }
 
             return result;
@@ -134,9 +138,7 @@ public class Day9Solver : ISolver
         public Vector(string command)
         {
             var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var direction = parts[0];
-            
-            Direction = direction switch
+            Direction = parts[0] switch
             {
                 "L" => Direction.Left,
                 "R" => Direction.Right,
