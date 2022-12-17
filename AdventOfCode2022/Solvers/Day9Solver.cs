@@ -26,13 +26,7 @@ public class Day9Solver : ISolver
 
     public string PartTwo()
     {
-        var simulator = new RopeSimulator(10);
-        foreach (var command in data)
-        {
-            simulator.Move(new Vector(command));
-        }
-        
-        return simulator.LastPartPointCount.ToString();
+        return string.Empty;
     }
 
     private class RopeSimulator
@@ -57,36 +51,57 @@ public class Day9Solver : ISolver
         {
             for (var i = 0; i < ropeCoords.Count - 1; i++)
             {
+                // First and second coords of rope parts
                 var first = ropeCoords[i];
                 var second = ropeCoords[i + 1];
-                var (f, s) = GetPairCoords(vector, first.Last(), second.Last());
-                first.AddRange(f);
-                second.AddRange(s);
+                
+                // Current coordinates of rope parts
+                var firstPosition = first.Last();
+                var secondPosition = second.Last();
+                
+                // Path parts after movement by vector
+                var (firstPathCoords, secondPathCoords)
+                    = GetPairCoords(vector, firstPosition, secondPosition);
+                
+                // Adding rope parts coordinates
+                first.AddRange(firstPathCoords);
+                second.AddRange(secondPathCoords);
             }
         }
 
-        private static (IEnumerable<Point>, IEnumerable<Point>) GetPairCoords(Vector vector, Point first, Point second)
+        private static (IEnumerable<Point>, IEnumerable<Point>) GetPairCoords(
+            Vector vector,
+            Point first,
+            Point second)
         {
             var firstPath = new List<Point>();
             var secondPath = new List<Point>();
+            
+            // Moving
             for (var i = 0; i < vector.Length; i++)
             {
-                var (startX, startY) = first;
+                // First part
                 var nextFirstPoint = vector.Direction switch
                 {
-                    Direction.Left => new Point(startX - 1, startY),
-                    Direction.Right => new Point(startX + 1, startY),
-                    Direction.Up => new Point(startX, startY - 1),
-                    Direction.Down => new Point(startX, startY + 1),
+                    Direction.Left => new Point(first.X - 1, first.Y),
+                    Direction.Right => new Point(first.X + 1, first.Y),
+                    Direction.Up => new Point(first.X, first.Y - 1),
+                    Direction.Down => new Point(first.X, first.Y + 1),
                     _ => throw new ArgumentOutOfRangeException()
                 };
-
                 firstPath.Add(nextFirstPoint);
                 
-                var dist = Distance(nextFirstPoint, second);
-                if (dist > Math.Sqrt(2))
+                // Moving next part if needed
+                var dist = Distance(second, nextFirstPoint);
+                var needMoveNextPart = dist > Math.Sqrt(2); // No contact (break)
+                if (needMoveNextPart)
                 {
-                    secondPath.Add(first);
+                    second = GetNearestPoint(second, nextFirstPoint);
+                    secondPath.Add(second);
+                }
+                else
+                {
+                    secondPath.Add(second);
                 }
                 
                 first = nextFirstPoint;
@@ -95,9 +110,36 @@ public class Day9Solver : ISolver
             return (firstPath, secondPath);
         }
 
+        private static Point GetNearestPoint(Point src, Point dst)
+        {
+            // Generate candidates
+            var candidates = new List<Point>
+            {
+                new(src.X + 1, src.Y),
+                new(src.X - 1, src.Y),
+                new(src.X, src.Y - 1),
+                new(src.X, src.Y + 1),
+                new(src.X - 1, src.Y - 1),
+                new(src.X + 1, src.Y + 1),
+                new(src.X - 1, src.Y + 1),
+                new(src.X + 1, src.Y - 1),
+            };
+            
+            // Select by min distance
+            var distances = candidates
+                .Select(e => Distance(e, dst))
+                .ToList();
+
+            var index = distances.IndexOf(distances.Min());
+            
+            return candidates[index];
+        }
+        
         private static double Distance(Point p1, Point p2)
             => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
     }
+    
+    #region Stuctures
     
     private enum Direction
     {
@@ -131,4 +173,6 @@ public class Day9Solver : ISolver
             Length = int.Parse(parts[1]);
         }
     }
+    
+    #endregion
 }
