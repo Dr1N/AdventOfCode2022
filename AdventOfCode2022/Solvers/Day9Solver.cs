@@ -31,6 +31,7 @@ public class Day9Solver : ISolver
 
     private class RopeSimulator
     {
+        private static readonly double BreakDistance = Math.Sqrt(2.0);
         private readonly List<List<Point>> ropeCoords;
         
         public int LastPartPointCount => ropeCoords
@@ -61,7 +62,7 @@ public class Day9Solver : ISolver
                 
                 // Path parts after movement by vector
                 var (firstPathCoords, secondPathCoords)
-                    = GetPairCoords(vector, firstPosition, secondPosition);
+                    = GetPathCoords(vector, firstPosition, secondPosition);
                 
                 // Adding rope parts coordinates
                 first.AddRange(firstPathCoords);
@@ -69,51 +70,49 @@ public class Day9Solver : ISolver
             }
         }
 
-        private static (IEnumerable<Point>, IEnumerable<Point>) GetPairCoords(
+        private static (IEnumerable<Point>, IEnumerable<Point>) GetPathCoords(
             Vector vector,
-            Point first,
-            Point second)
+            Point basePoint,
+            Point nextPoint)
         {
-            var firstPath = new List<Point>();
-            var secondPath = new List<Point>();
+            var basePointPath = new List<Point>();
+            var nextPointPath = new List<Point>();
             
             // Moving
             for (var i = 0; i < vector.Length; i++)
             {
-                // First part
-                var nextFirstPoint = vector.Direction switch
+                var nextBasePointPosition = vector.Direction switch
                 {
-                    Direction.Left => new Point(first.X - 1, first.Y),
-                    Direction.Right => new Point(first.X + 1, first.Y),
-                    Direction.Up => new Point(first.X, first.Y - 1),
-                    Direction.Down => new Point(first.X, first.Y + 1),
+                    Direction.Left => new Point(basePoint.X - 1, basePoint.Y),
+                    Direction.Right => new Point(basePoint.X + 1, basePoint.Y),
+                    Direction.Up => new Point(basePoint.X, basePoint.Y - 1),
+                    Direction.Down => new Point(basePoint.X, basePoint.Y + 1),
                     _ => throw new ArgumentOutOfRangeException()
                 };
-                firstPath.Add(nextFirstPoint);
+                basePointPath.Add(nextBasePointPosition);
+                basePoint = nextBasePointPosition;
                 
                 // Moving next part if needed
-                var dist = Distance(second, nextFirstPoint);
-                var needMoveNextPart = dist > Math.Sqrt(2); // No contact (break)
-                if (needMoveNextPart)
+                var currentDistance = Distance(nextPoint, nextBasePointPosition);
+                var isNeedMoveNextPoint = currentDistance > BreakDistance;
+                if (isNeedMoveNextPoint)
                 {
-                    second = GetNearestPoint(second, nextFirstPoint);
-                    secondPath.Add(second);
+                    nextPoint = GetNearestPoint(nextPoint, nextBasePointPosition);
+                    nextPointPath.Add(nextPoint);
                 }
                 else
                 {
-                    secondPath.Add(second);
+                    nextPointPath.Add(nextPoint);
                 }
-                
-                first = nextFirstPoint;
             }
             
-            return (firstPath, secondPath);
+            return (basePointPath, nextPointPath);
         }
 
         private static Point GetNearestPoint(Point src, Point dst)
         {
             // Generate candidates
-            var candidates = new List<Point>
+            var candidates = new List<Point>(8)
             {
                 new(src.X + 1, src.Y),
                 new(src.X - 1, src.Y),
@@ -125,11 +124,10 @@ public class Day9Solver : ISolver
                 new(src.X + 1, src.Y - 1),
             };
             
-            // Select by min distance
+            // Select next position by min distance
             var distances = candidates
                 .Select(e => Distance(e, dst))
                 .ToList();
-
             var index = distances.IndexOf(distances.Min());
             
             return candidates[index];
