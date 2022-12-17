@@ -15,127 +15,76 @@ public class Day9Solver : ISolver
 
     public string PartOne()
     {
-        var simulator = new RopeSimulator(2);
-        foreach (var command in data)
-        {
-            simulator.Move(new Vector(command));
-        }
+        var vectors = data
+            .Select(e => new Vector(e))
+            .ToList();
         
-        //simulator.Play(60);
+        var headWay = RopeSimulator.MoveHead(vectors);
+        var tailWay = RopeSimulator.MoveTail(headWay);
         
-        return simulator.LastPartPointCount.ToString();
+        return tailWay.Distinct().Count().ToString();
     }
 
     public string PartTwo()
     {
-        return string.Empty;
+        var vectors = data
+            .Select(e => new Vector(e))
+            .ToList();
+        
+        var headWay = RopeSimulator.MoveHead(vectors);
+        var tailWay = RopeSimulator.MoveTail(headWay);
+        
+        return tailWay.Distinct().Count().ToString();
     }
 
-    private class RopeSimulator
+    private static class RopeSimulator
     {
         private static readonly double BreakDistance = Math.Sqrt(2.0);
-        private readonly List<List<Point>> ropeCoords;
         
-        public int LastPartPointCount => ropeCoords
-            .Last()
-            .Distinct()
-            .Count();
-
-        public RopeSimulator(int ropeParts)
+        public static IEnumerable<Point> MoveHead(IEnumerable<Vector> vectors)
         {
-            ropeCoords = new List<List<Point>>();
-            for (var i = 0; i < ropeParts; i++)
+            var result = new List<Point>{ new (0, 0) };
+            foreach (var vector in vectors)
             {
-                ropeCoords.Add(new List<Point> {new(0, 0)});
-            }
-        }
-        
-        public void Move(Vector vector)
-        {
-            for (var i = 0; i < ropeCoords.Count - 1; i++)
-            {
-                // First and second coords of rope parts
-                var current = ropeCoords[i];
-                var next = ropeCoords[i + 1];
-                
-                // Current coordinates of rope parts
-                var currentPosition = current.Last();
-                var nextPosition = next.Last();
-                
-                // Path parts after movement by vector
-                var (currentPathCoords, nextPathCoords)
-                    = GetPathCoords(vector, currentPosition, nextPosition);
-                
-                // Adding rope parts coordinates
-                current.AddRange(currentPathCoords);
-                next.AddRange(nextPathCoords);
-            }
-        }
-
-        public void Play(int steps)
-        {
-            const int offsetX = 20;
-            const int offsetY = 10;
-            Console.Clear();
-            Console.CursorVisible = false;
-
-            var head = ropeCoords[0];
-            var next = ropeCoords[1];
-            for (var i = 0; i < steps; i++)
-            {
-                var headPosition = head[i];
-                Console.CursorLeft = headPosition.X + offsetX;
-                Console.CursorTop = headPosition.Y + offsetY;
-                Console.Write("H");
-                
-                var nextPosition = next[i];
-                Console.CursorLeft = nextPosition.X + offsetX;
-                Console.CursorTop = nextPosition.Y + offsetY;
-                Console.Write("1");
-            }
-            
-            Console.CursorVisible = true;
-        }
-        
-        private static (IEnumerable<Point>, IEnumerable<Point>) GetPathCoords(
-            Vector vector,
-            Point basePoint,
-            Point nextPoint)
-        {
-            var basePointPath = new List<Point>();
-            var nextPointPath = new List<Point>();
-            
-            // Moving
-            for (var i = 0; i < vector.Length; i++)
-            {
-                var nextBasePointPosition = vector.Direction switch
+                for (var i = 0; i < vector.Length; i++)
                 {
-                    Direction.Left => new Point(basePoint.X - 1, basePoint.Y),
-                    Direction.Right => new Point(basePoint.X + 1, basePoint.Y),
-                    Direction.Up => new Point(basePoint.X, basePoint.Y - 1),
-                    Direction.Down => new Point(basePoint.X, basePoint.Y + 1),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                basePointPath.Add(nextBasePointPosition);
-                basePoint = nextBasePointPosition;
-                
-                // Moving next part if needed
-                var currentDistance = Distance(nextPoint, nextBasePointPosition);
-                var isNeedMoveNextPoint = currentDistance > BreakDistance;
-                if (isNeedMoveNextPoint)
-                {
-                    nextPoint = GetNearestPoint(nextPoint, nextBasePointPosition);
-                    nextPointPath.Add(nextPoint);
-                }
-                else
-                {
-                    nextPointPath.Add(nextPoint);
+                    var lastPosition = result.Last();
+                    var nextPosition = GetNextPosition(lastPosition, vector.Direction);
+                    result.Add(nextPosition);
                 }
             }
             
-            return (basePointPath, nextPointPath);
+            return result;
         }
 
+        public static IEnumerable<Point> MoveTail(IEnumerable<Point> headWay)
+        {
+            var result = new List<Point> { new(0, 0) };
+            foreach (var point in headWay)
+            {
+                var lastPosition = result.Last();
+                var realDistance = GetDistance(lastPosition, point);
+                var isBreak = realDistance > BreakDistance;
+                if (!isBreak) continue;
+                var nextPoint = GetNearestPoint(lastPosition,point);
+                result.Add(nextPoint);;
+            }
+
+            return result;
+        }
+        
+        private static Point GetNextPosition(Point point, Direction direction)
+        {
+            return direction switch
+            {
+                Direction.Left => new Point(point.X - 1, point.Y),
+                Direction.Right => new Point(point.X + 1, point.Y),
+                Direction.Up => new Point(point.X, point.Y - 1),
+                Direction.Down => new Point(point.X, point.Y + 1),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+        
         private static Point GetNearestPoint(Point src, Point dst)
         {
             // Generate candidates
@@ -153,14 +102,14 @@ public class Day9Solver : ISolver
             
             // Select next position by min distance
             var distances = candidates
-                .Select(e => Distance(e, dst))
+                .Select(e => GetDistance(e, dst))
                 .ToList();
             var index = distances.IndexOf(distances.Min());
             
             return candidates[index];
         }
         
-        private static double Distance(Point p1, Point p2)
+        private static double GetDistance(Point p1, Point p2)
             => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
     }
     
