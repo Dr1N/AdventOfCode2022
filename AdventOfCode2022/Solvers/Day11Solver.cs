@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using AdventOfCode2022.Interfaces;
 
 namespace AdventOfCode2022.Solvers;
@@ -18,8 +17,9 @@ public class Day11Solver : ISolver
     {
         var monkeys = InitializeMonkey(data);
         var simulator = new JungleSimulator(monkeys);
+        simulator.Simulate();
         
-        return string.Empty;
+        return simulator.GetAnswer().ToString();
     }
 
     public string PartTwo()
@@ -42,6 +42,11 @@ public class Day11Solver : ISolver
 
             monkeyDescription.AppendLine(line);
         }
+
+        if (monkeyDescription.Length != 0)
+        {
+            result.Add(new Monkey(monkeyDescription.ToString()));
+        }
         
         return result;
     }
@@ -52,10 +57,7 @@ public class Day11Solver : ISolver
         
         private readonly List<Monkey> monkeys;
 
-        public JungleSimulator(List<Monkey> monkeys)
-        {
-            this.monkeys = monkeys ?? throw new ArgumentNullException();
-        }
+        public JungleSimulator(List<Monkey> monkeys) => this.monkeys = monkeys;
 
         public void Simulate()
         {
@@ -63,17 +65,23 @@ public class Day11Solver : ISolver
             {
                 foreach (var monkey in monkeys)
                 {
-                    
+                    while (true)
+                    {
+                        var thr = monkey.ThrowThing();
+                        if (thr is null) break;
+
+                        var targetMonkey = monkeys[thr.Monkey];
+                        targetMonkey.CatchThing(thr.Thing);
+                    }
                 }
             }
         }
 
-        public int GetAnswer()
-        {
-            var result = 0;
-            
-            return result;
-        }
+        public int GetAnswer() => monkeys
+            .OrderByDescending(e => e.Inspects)
+            .Take(2)
+            .Select(e => e.Inspects)
+            .Aggregate(1, (x,y) => x * y);
     }
     
     private class Monkey
@@ -88,9 +96,9 @@ public class Day11Solver : ISolver
 
         private int divider;
 
-        private int trueMonkey;
+        private int trueMonkeyIndex;
 
-        private int falseMonkey;
+        private int falseMonkeyIndex;
 
         public Monkey(string description)
         {
@@ -105,31 +113,30 @@ public class Day11Solver : ISolver
             });
         }
 
-        public Throw Throw()
+        public Throw ThrowThing()
         {
-            return null;
+            if (!things.Any())
+            {
+                return null;
+            }
+
+            Inspects++;
+            var thing = things.Dequeue();
+            var value = operation(thing);
+            var boredValue = value / WorryDivider;
+            
+            return boredValue % divider == 0
+                ? new Throw(boredValue, trueMonkeyIndex)
+                : new Throw(boredValue, falseMonkeyIndex);
         }
 
-        public void Catch(int thing) => things.Enqueue(thing);
-        
-        public int GetWorryLevel()
-        {
-            return 0;
-        }
-
-        public int GetNextMonkey()
-        {
-            return 0;
-        }
+        public void CatchThing(int thing) => things.Enqueue(thing);
         
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"Things: {string.Join(',', things)}");
-            sb.AppendLine($"Operation: {operation}");
-            sb.AppendLine($"Divider: {divider}");
-            sb.AppendLine($"True index: {trueMonkey}");
-            sb.AppendLine($"False index: {falseMonkey}");
+            sb.AppendLine($"Inspects: {Inspects}");
+            sb.AppendLine($"Things: {string.Join(", ", things)}");
             
             return sb.ToString();
         }
@@ -176,8 +183,8 @@ public class Day11Solver : ISolver
         
         private void InitMonkey(IReadOnlyList<string> input)
         {
-            trueMonkey = int.Parse(input[0].Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
-            falseMonkey = int.Parse(input[1].Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
+            trueMonkeyIndex = int.Parse(input[0].Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
+            falseMonkeyIndex = int.Parse(input[1].Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
         }
     }
 
