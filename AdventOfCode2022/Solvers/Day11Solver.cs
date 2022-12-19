@@ -5,6 +5,10 @@ namespace AdventOfCode2022.Solvers;
 
 public class Day11Solver : ISolver
 {
+    private const int WorryDividerOne = 3;
+    private const int RoundsOne = 20;
+    private const int RoundsTwo = 10_000;
+    
     private readonly IEnumerable<string> data;
 
     public Day11Solver(IEnumerable<string> data)
@@ -16,17 +20,25 @@ public class Day11Solver : ISolver
     public string PartOne()
     {
         var monkeys = InitializeMonkey(data);
-        var simulator = new JungleSimulator(monkeys);
-        simulator.Simulate();
+        var simulator = new JungleSimulator(monkeys, RoundsOne);
+        simulator.Simulate(e => e / WorryDividerOne);
         
         return simulator.GetAnswer().ToString();
     }
 
     public string PartTwo()
     {
-        return string.Empty;
+        var monkeys = InitializeMonkey(data);
+        var simulator = new JungleSimulator(monkeys, RoundsTwo);
+        var lcm = monkeys.Select(e => e.Divider).Aggregate(1, (x, y) => x * y);
+        simulator.Simulate(e => e % lcm);
+        
+        return simulator.GetAnswer().ToString();
     }
 
+    /// <summary>
+    /// Create Monkeys from input string
+    /// </summary>
     private static List<Monkey> InitializeMonkey(IEnumerable<string> data)
     {
         var result = new List<Monkey>();
@@ -51,50 +63,58 @@ public class Day11Solver : ISolver
         return result;
     }
 
-    private class JungleSimulator
+    /// <summary>
+    /// Rounds simulator (monkey manager)
+    /// </summary>
+    private sealed class JungleSimulator
     {
-        private const int Rounds = 20;
+        private readonly int rounds;
         
         private readonly List<Monkey> monkeys;
 
-        public JungleSimulator(List<Monkey> monkeys) => this.monkeys = monkeys;
-
-        public void Simulate()
+        public JungleSimulator(List<Monkey> monkeys, int rounds)
         {
-            for (var i = 0; i < Rounds; i++)
+            this.rounds = rounds;
+            this.monkeys = monkeys;
+        } 
+
+        public void Simulate(Func<long, long> worryOperation)
+        {
+            for (var i = 0; i < rounds; i++)
             {
                 foreach (var monkey in monkeys)
                 {
                     while (true)
                     {
-                        var thr = monkey.ThrowThing();
-                        if (thr is null) break;
+                        var thr = monkey.ThrowThing(worryOperation);
+                        if (thr == Throw.Empty) break;
 
-                        var targetMonkey = monkeys[thr.Monkey];
-                        targetMonkey.CatchThing(thr.Thing);
+                        var targetMonkey = monkeys[thr.MonkeyIndex];
+                        targetMonkey.CatchThing(thr.NewValue);
                     }
                 }
             }
         }
 
-        public int GetAnswer() => monkeys
+        public long GetAnswer() => monkeys
             .OrderByDescending(e => e.Inspects)
             .Take(2)
             .Select(e => e.Inspects)
-            .Aggregate(1, (x,y) => x * y);
+            .Aggregate(1L, (x,y) => x * y);
     }
     
-    private class Monkey
+    /// <summary>
+    /// Monkey
+    /// </summary>
+    private sealed class Monkey
     {
         public int Inspects { get; private set; }
-        
-        private const int WorryDivider = 3;
-        
-        private readonly Queue<int> things = new();
 
-        private Func<int, int> operation;
+        public int Divider { get; private set; }
 
-        private int divider;
+        private readonly Queue<long> things = new();
+
+        private Func<long, long> monkeyOperation;
 
         private int trueMonkeyIndex;
 
@@ -104,33 +124,29 @@ public class Day11Solver : ISolver
         {
             var parts = description.Split(Environment.NewLine);
             InitThings(parts[1].Split(":", StringSplitOptions.RemoveEmptyEntries)[1]);
-            InitOperation(parts[2].Split(":", StringSplitOptions.RemoveEmptyEntries)[1]);
+            InitMonkeyOperation(parts[2].Split(":", StringSplitOptions.RemoveEmptyEntries)[1]);
             InitDivider(parts[3].Split(":", StringSplitOptions.RemoveEmptyEntries)[1]);
-            InitMonkey(new[]
+            InitMonkeyIndexes(new[]
             {
                 parts[4].Split(":", StringSplitOptions.RemoveEmptyEntries)[1],
                 parts[5].Split(":", StringSplitOptions.RemoveEmptyEntries)[1],
             });
         }
 
-        public Throw ThrowThing()
+        public Throw ThrowThing(Func<long, long> worryOperation)
         {
-            if (!things.Any())
-            {
-                return null;
-            }
-
-            Inspects++;
-            var thing = things.Dequeue();
-            var value = operation(thing);
-            var boredValue = value / WorryDivider;
+            if (things.Count == 0) return Throw.Empty;
             
-            return boredValue % divider == 0
-                ? new Throw(boredValue, trueMonkeyIndex)
-                : new Throw(boredValue, falseMonkeyIndex);
+            Inspects++;
+            var oldValue = things.Dequeue();
+            var newValue = worryOperation(monkeyOperation(oldValue));
+            
+            return newValue % Divider == 0
+                ? new Throw(newValue, trueMonkeyIndex)
+                : new Throw(newValue, falseMonkeyIndex);
         }
 
-        public void CatchThing(int thing) => things.Enqueue(thing);
+        public void CatchThing(long thing) => things.Enqueue(thing);
         
         public override string ToString()
         {
@@ -148,7 +164,7 @@ public class Day11Solver : ISolver
                 .ForEach(e => this.things.Enqueue(int.Parse(e)));
         }
         
-        private void InitOperation(string input)
+        private void InitMonkeyOperation(string input)
         {
             var parts = input.Split('=', StringSplitOptions.RemoveEmptyEntries);
             var calcOperation = parts[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)[1];
@@ -156,37 +172,41 @@ public class Day11Solver : ISolver
 
             if (int.TryParse(argument, out var arg))
             {
-                operation = calcOperation switch
+                monkeyOperation = calcOperation switch
                 {
-                    "+" => e => e + arg,
-                    "*" => e => e * arg,
-                    "-" => e => e - arg,
-                    "/" => e => e / arg,
+                    "+" => old => old + arg,
+                    "*" => old => old * arg,
                     _ => throw new InvalidOperationException()
                 };
             }
             else if (argument == "old")
             {
-                operation = calcOperation switch
+                monkeyOperation = calcOperation switch
                 {
-                    "+" => e => e + e,
-                    "*" => e => e * e,
-                    "-" => e => e - e,
-                    "/" => e => e / e,
+                    "+" => old => old + old,
+                    "*" => old => old * old,
                     _ => throw new InvalidOperationException()
                 };
             }
         }
 
         private void InitDivider(string input) =>
-            divider = int.Parse(input.Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
+            Divider = int.Parse(input.Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
         
-        private void InitMonkey(IReadOnlyList<string> input)
+        private void InitMonkeyIndexes(IReadOnlyList<string> input)
         {
             trueMonkeyIndex = int.Parse(input[0].Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
             falseMonkeyIndex = int.Parse(input[1].Split(' ', StringSplitOptions.RemoveEmptyEntries).Last());
         }
     }
 
-    private record Throw(int Thing, int Monkey);
+    /// <summary>
+    /// Represents the throw of thing
+    /// </summary>
+    /// <param name="NewValue">Thing new value</param>
+    /// <param name="MonkeyIndex">Target monkey index</param>
+    private sealed record Throw(long NewValue, int MonkeyIndex)
+    {
+        public static Throw Empty => default;
+    }
 }
