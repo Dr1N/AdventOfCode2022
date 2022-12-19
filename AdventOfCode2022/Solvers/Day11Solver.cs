@@ -78,6 +78,8 @@ public class Day11Solver : ISolver
     
     private class Monkey
     {
+        public int Inspects { get; private set; }
+        
         private const int WorryDivider = 3;
         
         private readonly Queue<int> things = new();
