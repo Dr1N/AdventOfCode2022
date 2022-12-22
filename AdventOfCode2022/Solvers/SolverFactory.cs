@@ -29,6 +29,7 @@ public class SolverFactory : ISolverFactory
             9 => new Day9Solver(data),
             10 => new Day10Solver(data),
             11 => new Day11Solver(data),
+            12 => new Day12Solver(data),
             _ => throw new InvalidOperationException(
                 $"Can't create solver for {day}",
                 new NotImplementedException())
