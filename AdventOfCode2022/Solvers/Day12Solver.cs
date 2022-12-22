@@ -4,12 +4,13 @@ namespace AdventOfCode2022.Solvers;
 
 public class Day12Solver : ISolver
 {
-   private readonly IEnumerable<string> data;
+    private readonly IEnumerable<string> data;
+    private int[,] map;
 
     public Day12Solver(IEnumerable<string> data)
     {
         ArgumentNullException.ThrowIfNull(data, nameof(data));
-        this.data = data;
+        InitMap(data);
     }
 
     public string PartOne()
@@ -22,5 +23,10 @@ public class Day12Solver : ISolver
         return string.Empty;
     }
 
-   
+    private void InitMap(IEnumerable<string> data)
+    {
+        
+    }
+
+    private record Point(int X, int Y);
 }
