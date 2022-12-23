@@ -6,7 +6,7 @@ public class Day12Solver : ISolver
 {
     private Vertex[,] map;
     private Vertex start;
-    private Vertex end;
+    private Vertex finish;
     
     public Day12Solver(IEnumerable<string> data)
     {
@@ -16,22 +16,30 @@ public class Day12Solver : ISolver
 
     public string PartOne()
     {
-        var result = Bfs();
-        
-        return result.Select(e => e.Distance).Max().ToString();
+        Bfs(start, finish, out var way);
+        return way.Last().Distance.ToString();
     }
 
     public string PartTwo()
     {
-        return string.Empty;
+        // Brut force
+        var candidates = GetAllCandidates('a');
+        var results = new List<int>(candidates.Count);
+        foreach (var candidate in candidates)
+        {
+            if (!Bfs(candidate, finish, out var way))
+                continue;
+            results.Add(way.Last().Distance);
+        }
+        
+        return results.Min().ToString();
     }
 
-    private IEnumerable<Vertex> Bfs()
+    private bool Bfs(Vertex begin, Vertex end, out HashSet<Vertex> visited)
     {
+        visited = new HashSet<Vertex>();
         var queue = new Queue<Vertex>();
-        var visited = new HashSet<Vertex>();
-        
-        queue.Enqueue(start);
+        queue.Enqueue(begin);
         
         while (queue.Count > 0)
         {
@@ -39,7 +47,7 @@ public class Day12Solver : ISolver
             visited.Add(currentVertex);
             if (currentVertex == end)
             {
-                return visited;
+                return true;
             }
             
             var neighbors = GetNeighbors(currentVertex);
@@ -52,7 +60,7 @@ public class Day12Solver : ISolver
             }
         }
 
-        return visited;
+        return false;
     }
 
     // Get Neighbors for vertex
@@ -117,10 +125,27 @@ public class Day12Solver : ISolver
                 else if (data[row][col] == 'E')     
                 {
                     map[row, col] = new Vertex(row, col, 0, 'z');
-                    end = map[row, col];
+                    finish = map[row, col];
                 }
             }
         }
+    }
+
+    private List<Vertex> GetAllCandidates(char height)
+    {
+        var result = new List<Vertex>();
+        for (var row = 0; row < map.GetLength(0); row++)
+        {
+            for (var col = 0; col < map.GetLength(1); col++)
+            {
+                if (map[row, col].Height == height)
+                {
+                    result.Add(map[row, col]);
+                }
+            }
+        }
+        
+        return result;
     }
 
     private record Vertex(int X, int Y, int Distance, char Height)
