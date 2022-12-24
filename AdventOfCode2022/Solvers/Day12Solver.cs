@@ -75,28 +75,28 @@ public class Day12Solver : ISolver
         // Left vertex
         if (vertex.X - 1 >= 0 && CheckValues(vertex,map[vertex.X - 1, vertex.Y]))
         {
-            var next = map[vertex.X - 1, vertex.Y] with { Distance = vertex.Distance + 1, X = vertex.X - 1 };
+            var next = map[vertex.X - 1, vertex.Y] with { Distance = vertex.Distance + 1 };
             result.Add(next);
         }
         
         // Right vertex
         if (vertex.X + 1 < map.GetLength(0) && CheckValues(vertex,map[vertex.X + 1, vertex.Y]))
         {
-            var next = map[vertex.X + 1, vertex.Y] with { Distance = vertex.Distance + 1, X = vertex.X + 1 };
+            var next = map[vertex.X + 1, vertex.Y] with { Distance = vertex.Distance + 1 };
             result.Add(next);
         }
         
         // Up vertex
         if (vertex.Y - 1 >= 0 && CheckValues(vertex,map[vertex.X, vertex.Y - 1]))
         {
-            var next = map[vertex.X, vertex.Y - 1] with { Distance = vertex.Distance + 1, Y = vertex.Y - 1 };
+            var next = map[vertex.X, vertex.Y - 1] with { Distance = vertex.Distance + 1 };
             result.Add(next);
         }
         
         // Down vertex
         if (vertex.Y + 1 < map.GetLength(1) && CheckValues(vertex,map[vertex.X, vertex.Y + 1]))
         {
-            var next = map[vertex.X, vertex.Y + 1] with { Distance = vertex.Distance + 1, Y = vertex.Y + 1};
+            var next = map[vertex.X, vertex.Y + 1] with { Distance = vertex.Distance + 1 };
             result.Add(next);
         }
 
