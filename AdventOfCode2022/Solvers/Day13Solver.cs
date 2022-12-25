@@ -19,11 +19,9 @@ public class Day13Solver : ISolver
         var cnt = 0;
         foreach (var message in messages)
         {
-            cnt++;
-            var package1Tokens = message.Package1.Tokens().ToList();
-            var package2Tokens = message.Package2.Tokens().ToList();
-            Debug.WriteLine($"Message {cnt}:");
-            Debug.WriteLine(string.Join(" | ", package1Tokens) + " vs " + string.Join(" | ", package2Tokens));
+            Debug.WriteLine($"Message {++cnt}:");
+            Debug.WriteLine(message.GetAsStringLine());
+            Debug.WriteLine($"IsValid: {message.IsValid()}");
             Debug.WriteLine(new string('=', 50));
         }
         
@@ -35,19 +33,62 @@ public class Day13Solver : ISolver
         return string.Empty;
     }
 
-    private record Message(Package Package1, Package Package2)
+    private record Message(Package Left, Package Right)
     {
         public bool IsValid()
         {
-            return false;
+            // Check length
+            if (Left.Tokens().Count() > Right.Tokens().Count())
+            {
+                return false;
+            }
+            
+            // Left is short
+            var leftTokens = Left.Tokens().ToList();
+            var rightTokens = Right.Tokens().ToList();
+            var cnt = 0;
+            var result = true;
+            while (true)
+            {
+                if (cnt == leftTokens.Count) break;
+                
+                var leftToken = leftTokens[cnt];
+                var rightToken = rightTokens[cnt];
+                if (leftToken is IntegerToken ilt && rightToken is IntegerToken irt)
+                {
+                    result = result && ilt.Value <= irt.Value;
+                }
+                else if (leftToken is ListToken llt && rightToken is ListToken rlt)
+                {
+                    
+                }
+                else if (leftToken is IntegerToken it1 && rightToken is ListToken rlt1)
+                {
+                    
+                }
+                else if (leftToken is ListToken llt1 && rightToken is IntegerToken rt1)
+                {
+                    
+                }
+                cnt++;
+            }
+            
+            return result;
         }
 
-        public override string ToString() => string.Join(Environment.NewLine, Package1, Package2);
+        public string GetAsStringLine()
+        {
+            var leftTokens = Left.Tokens().ToList();
+            var rightTokens = Right.Tokens().ToList();
+            return string.Join(" | ", leftTokens) + " vs " + string.Join(" | ", rightTokens);
+        }
+        
+        public override string ToString() => string.Join(Environment.NewLine, Left, Right);
     }
     
     private record Package(string Value)
     {
-        public IEnumerable<string> Tokens() => TokenParser.GetTokens(Value);
+        public IEnumerable<Token> Tokens() => TokenParser.GetTokens(Value);
 
         public override string ToString() => Value;
     }
@@ -58,14 +99,14 @@ public class Day13Solver : ISolver
         public const char ListStartChar = '[';
         public const char ListEndChar = ']';
         
-        public static IEnumerable<string> GetTokens(string value)
+        public static IEnumerable<Token> GetTokens(string value)
         {
             // Remove end and start braces
             var trimed = value[1..^1];
             var packagePointer = 0;
     
             // Empty List
-            if (trimed.Length == 0) yield return value;
+            if (trimed.Length == 0) yield return new ListToken(value);
             
             while (true)
             {
@@ -92,7 +133,7 @@ public class Day13Solver : ISolver
                     
                     // From pointer to comma
                     var token = trimed.Substring(packagePointer, substringLength);
-                    yield return token;
+                    yield return new IntegerToken(token);
                     
                     // End of package
                     if (separatorIndex == -1) yield break;
@@ -126,7 +167,7 @@ public class Day13Solver : ISolver
                     packagePointer++;
                     var listLenght = packagePointer - startList;
                     var token = trimed.Substring(startList, listLenght);
-                    yield return token;
+                    yield return new ListToken(token);
                 }
             }
         }
@@ -149,11 +190,11 @@ public class Day13Solver : ISolver
         public override string ToString() => value;
     }
 
-    private class IntegerToken : Token
+    private class IntegerToken : Token, IComparable<IntegerToken>
     {
         public int Value { get; }
         
-        protected IntegerToken(string value) : base(value)
+        public IntegerToken(string value) : base(value)
         {
             if (!int.TryParse(value, out var intVal))
             {
@@ -162,9 +203,16 @@ public class Day13Solver : ISolver
 
             Value = intVal;
         }
+
+        public int CompareTo(IntegerToken other)
+        {
+            if (ReferenceEquals(this, other)) return 0;
+            if (ReferenceEquals(null, other)) return 1;
+            return Value.CompareTo(other.Value);
+        }
     }
     
-    private class ListToken : Token
+    private class ListToken : Token, IComparable<ListToken>
     {
         public ListToken(string value) : base(value)
         {
@@ -173,6 +221,11 @@ public class Day13Solver : ISolver
             {
                 throw new ArgumentException(null, nameof(value));
             }
+        }
+
+        public int CompareTo(ListToken other)
+        {
+            throw new NotImplementedException();
         }
     }
     
