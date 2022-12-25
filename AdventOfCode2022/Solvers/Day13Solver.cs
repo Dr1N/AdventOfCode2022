@@ -35,23 +35,6 @@ public class Day13Solver : ISolver
         return string.Empty;
     }
 
-    private void Initialize(IEnumerable<string> data)
-    {
-        var lines = new List<string>(2);
-        foreach (var line in data)
-        {
-            lines.Add(line);
-            if (!string.IsNullOrWhiteSpace(line)) continue;
-            messages.Add(new Message(new Package(lines[0]), new Package(lines[1])));
-            lines.Clear();
-        }
-
-        if (lines.Count == 2)
-        {
-            messages.Add(new Message(new Package(lines[0]), new Package(lines[1])));
-        }
-    }
-
     private record Message(Package Package1, Package Package2)
     {
         public bool IsValid()
@@ -64,18 +47,25 @@ public class Day13Solver : ISolver
     
     private record Package(string Value)
     {
+        public IEnumerable<string> Tokens() => TokenParser.GetTokens(Value);
+
+        public override string ToString() => Value;
+    }
+
+    private static class TokenParser
+    {
         private const char Separator = ',';
-        private const char ListStartChar = '[';
-        private const char ListEndChar = ']';
+        public const char ListStartChar = '[';
+        public const char ListEndChar = ']';
         
-        public IEnumerable<string> Tokens()
+        public static IEnumerable<string> GetTokens(string value)
         {
             // Remove end and start braces
-            var trimed = Value[1..^1];
+            var trimed = value[1..^1];
             var packagePointer = 0;
     
             // Empty List
-            if (trimed.Length == 0) yield return Value;
+            if (trimed.Length == 0) yield return value;
             
             while (true)
             {
@@ -140,11 +130,71 @@ public class Day13Solver : ISolver
                 }
             }
         }
+    }
+    
+    private class Token
+    {
+        private readonly string value;
 
-        public override string ToString() => Value;
+        protected Token(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+            
+            this.value = value;
+        }
+
+        public override string ToString() => value;
+    }
+
+    private class IntegerToken : Token
+    {
+        public int Value { get; }
+        
+        protected IntegerToken(string value) : base(value)
+        {
+            if (!int.TryParse(value, out var intVal))
+            {
+                throw new ArgumentException(null, nameof(value));
+            }
+
+            Value = intVal;
+        }
+    }
+    
+    private class ListToken : Token
+    {
+        public ListToken(string value) : base(value)
+        {
+            if (!value.StartsWith(TokenParser.ListStartChar)
+                || !value.EndsWith(TokenParser.ListEndChar))
+            {
+                throw new ArgumentException(null, nameof(value));
+            }
+        }
     }
     
     #region Helpers
+    
+    private void Initialize(IEnumerable<string> data)
+    {
+        var lines = new List<string>(2);
+        foreach (var line in data)
+        {
+            lines.Add(line);
+            if (!string.IsNullOrWhiteSpace(line)) continue;
+            messages.Add(new Message(new Package(lines[0]), new Package(lines[1])));
+            lines.Clear();
+        }
+
+        if (lines.Count == 2)
+        {
+            messages.Add(new Message(new Package(lines[0]), new Package(lines[1])));
+        }
+    }
+    
     private string GetSignalsString()
     {
         var sb = new StringBuilder();
@@ -157,5 +207,6 @@ public class Day13Solver : ISolver
 
         return sb.ToString();
     }
+    
     #endregion
 }
