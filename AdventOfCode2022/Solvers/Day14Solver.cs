@@ -32,10 +32,10 @@ public class Day14Solver : ISolver
 
     private static List<Point> BuildMap(IEnumerable<string> stringMap)
     {
-        (int Min, int Max) MakeMinMax(int p1, int p2)
+        (int Min, int Max) MinMax(int p1, int p2)
             => (Math.Min(p1, p2), Math.Max(p1, p2));
         
-        var results = new List<Point>();
+        var results = new HashSet<Point>();
         foreach (var line in stringMap)
         {
             var points = line.Split("->", Options);
@@ -45,7 +45,7 @@ public class Day14Solver : ISolver
                 var end = Point.Parse(points[i + 1]);
                 if (start.X == end.X) // Vertical
                 {
-                    var (minY, maxY) = MakeMinMax(start.Y,  end.Y);
+                    var (minY, maxY) = MinMax(start.Y,  end.Y);
                     Enumerable
                         .Range(minY, maxY - minY + 1)
                         .ToList()
@@ -53,7 +53,7 @@ public class Day14Solver : ISolver
                 }
                 else if (start.Y == end.Y) // Horizontal
                 {
-                    var (minX, maxX) = MakeMinMax(start.X, end.X);
+                    var (minX, maxX) = MinMax(start.X, end.X);
                     Enumerable
                         .Range(minX, maxX - minX + 1)
                         .ToList()
@@ -66,9 +66,14 @@ public class Day14Solver : ISolver
             }
         }
         
-        return results.Distinct().ToList();
+        return results.ToList();
     }
 
+    private static string DrawMap(IEnumerable<Point> map)
+    {
+        return string.Empty;
+    }
+    
     private readonly record struct Point(int X, int Y)
     {
         public static Point Parse(string point)
