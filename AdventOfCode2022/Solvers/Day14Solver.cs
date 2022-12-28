@@ -1,13 +1,11 @@
 ﻿using System.Diagnostics;
-using System.Drawing;
-using System.Reflection.Metadata.Ecma335;
 using AdventOfCode2022.Interfaces;
 
 namespace AdventOfCode2022.Solvers;
 
 public class Day14Solver : ISolver
 {
-    private const StringSplitOptions options = StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries;
+    private const StringSplitOptions Options = StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries;
     private readonly IEnumerable<string> data;
 
     public Day14Solver(IEnumerable<string> data)
@@ -19,12 +17,10 @@ public class Day14Solver : ISolver
     public string PartOne()
     {
         var map = BuildMap(data);
-        var maxX = map.Select(e => e.X).Max();
-        var minX = map.Select(e => e.X).Min();
-        var maxY = map.Select(e => e.Y).Max();
-        var minY = map.Select(e => e.Y).Min();
+        var width = map.Select(e => e.X).Max() - map.Select(e => e.X).Min() + 1;
+        var heigth = map.Select(e => e.Y).Max() - map.Select(e => e.Y).Min() + 1;
         
-        Debug.WriteLine($"{minX}...{maxX} : {minY} ... {maxY}");
+        Debug.WriteLine($"{width} x {heigth}");
         
         return string.Empty;
     }
@@ -35,11 +31,51 @@ public class Day14Solver : ISolver
     }
 
     private static List<Point> BuildMap(IEnumerable<string> stringMap)
-        => (from line in stringMap
-                from point in line.Split("->", options) 
-                select point.Split(',', options) 
-                into coords 
-            select new Point(int.Parse(coords[0]), int.Parse(coords[1])))
-            .ToList();
-    private record struct Point(int X, int Y);
+    {
+        (int Min, int Max) MakeMinMax(int p1, int p2)
+            => (Math.Min(p1, p2), Math.Max(p1, p2));
+        
+        var results = new List<Point>();
+        foreach (var line in stringMap)
+        {
+            var points = line.Split("->", Options);
+            for (var i = 0; i < points.Length - 1; i++)
+            {
+                var start = Point.Parse(points[i]);
+                var end = Point.Parse(points[i + 1]);
+                if (start.X == end.X) // Vertical
+                {
+                    var (minY, maxY) = MakeMinMax(start.Y,  end.Y);
+                    Enumerable
+                        .Range(minY, maxY - minY + 1)
+                        .ToList()
+                        .ForEach(e => results.Add(new Point(start.X, e)));
+                }
+                else if (start.Y == end.Y) // Horizontal
+                {
+                    var (minX, maxX) = MakeMinMax(start.X, end.X);
+                    Enumerable
+                        .Range(minX, maxX - minX + 1)
+                        .ToList()
+                        .ForEach(e => results.Add(new Point(e, start.Y)));
+                }
+                else
+                {
+                    throw new InvalidOperationException();
+                }
+            }
+        }
+        
+        return results.Distinct().ToList();
+    }
+
+    private readonly record struct Point(int X, int Y)
+    {
+        public static Point Parse(string point)
+        {
+            var coords = point.Split(",", Options);
+
+            return new Point(int.Parse(coords[0]), int.Parse(coords[1]));
+        }
+    }
 }
