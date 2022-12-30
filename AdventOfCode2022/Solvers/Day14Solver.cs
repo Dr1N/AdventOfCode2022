@@ -213,10 +213,10 @@ public class Day14Solver : ISolver
        var p2 = new Point(current.X - 1, current.Y + 1); // Left - Down
        var p3 = new Point(current.X + 1, current.Y + 1); // Right - Down
        
-       return new List<Point> { p1, p2, p3 };
+       return new List<Point>(3) { p1, p2, p3 };
    }
    
-    private readonly record struct Point(int X, int Y)
+    private record struct Point(int X, int Y)
     {
         public static readonly Point Rest = new(-1, -1);
         public static readonly Point Infinity = new(-2, -2);
