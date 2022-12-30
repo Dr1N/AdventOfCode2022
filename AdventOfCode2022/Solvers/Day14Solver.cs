@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
-using AdventOfCode2022.Interfaces;
+﻿using AdventOfCode2022.Interfaces;
 
 namespace AdventOfCode2022.Solvers;
 
@@ -19,16 +17,9 @@ public class Day14Solver : ISolver
 
     public string PartOne()
     {
-        return string.Empty;
-        
         var rocks = BuildRockMap(data);
-        var sands = new List<Point>();
-        
-        var cnt = 0; // Iterations
+        var sands = new HashSet<Point>();
         var isEnd = false;
-        
-        // TODO
-        RemovePlayDirectory();
         
         // Simulation
         while (true)
@@ -36,31 +27,25 @@ public class Day14Solver : ISolver
             // Create new sand
             var currentSandPosition = new Point(500, 0);
             
-            // Move new sand to rest
+            // Move new sand to rest or outside
             while (true)
             {
-                cnt++;
                 var nextSandPosition = NextPosition(rocks, sands, currentSandPosition);
-                if (nextSandPosition == Point.Empty)
+                if (nextSandPosition == Point.Rest)
                 {
-                    // Add rest sand and continue
                     sands.Add(currentSandPosition);
                     break;
                 }
         
                 if (nextSandPosition == Point.Infinity)
                 {
-                    // End of generation - sand in infinity
                     isEnd = true;
                     break;
                 }
                 
                 currentSandPosition = nextSandPosition;
             }
-        
-            // Visualisation TODO
-            DrawDebugState(cnt, rocks, sands, currentSandPosition, DebugMode.File);
-            
+
             if (isEnd) break;
         }
         
@@ -70,13 +55,7 @@ public class Day14Solver : ISolver
     public string PartTwo()
     {
         var rocks = BuildRockMapWithFloor(data);
-        var sands = new List<Point>();
-        
-        var cnt = 0; // Iterations
-        var snd = 0;
-        
-        // TODO
-        RemovePlayDirectory();
+        var sands = new HashSet<Point>();
         
         // Simulation
         while (true)
@@ -84,46 +63,39 @@ public class Day14Solver : ISolver
             // Create new sand
             var currentSandPosition = new Point(500, 0);
             
-            // Block sand generator
-            var block = new List<Point>
+            // Coords for block sand generator (500-0)
+            var block = new HashSet<Point>
             {
                 new(499, 1),
                 new(500, 1),
                 new (501, 1),
             };
 
+            // Generator blocked - end of work
             if (block.All(e => sands.Contains(e)))
             {
+                // Last sand
                 sands.Add(new Point(500,0));
-                // Visualisation TODO
-                DrawDebugState(cnt, rocks, sands, currentSandPosition, DebugMode.Console);
                 break;
             }
             
             // Move new sand to rest
             while (true)
             {
-                cnt++;
-                var nextSandPosition = NextPosition(rocks, sands, currentSandPosition);
-                if (nextSandPosition == Point.Empty)
+                var nextSandPosition = NextPositionWithFloor(rocks, sands, currentSandPosition);
+                if (nextSandPosition == Point.Rest)
                 {
-                    // Add rest sand and continue
                     sands.Add(currentSandPosition);
                     break;
                 }
                 currentSandPosition = nextSandPosition;
             }
-
-            snd++;
-            
-            // Visualisation TODO
-            DrawDebugState(cnt, rocks, sands, currentSandPosition, DebugMode.Console);
         }
         
         return sands.Count.ToString();
     }
 
-    private static List<Point> BuildRockMap(IEnumerable<string> stringMap)
+    private static RockMap BuildRockMap(IEnumerable<string> stringMap)
     {
         (int Min, int Max) MinMax(int p1, int p2)
             => (Math.Min(p1, p2), Math.Max(p1, p2));
@@ -136,7 +108,8 @@ public class Day14Solver : ISolver
             {
                 var start = Point.Parse(points[i]);
                 var end = Point.Parse(points[i + 1]);
-                if (start.X == end.X) // Vertical
+                // Vertical
+                if (start.X == end.X) 
                 {
                     var (minY, maxY) = MinMax(start.Y,  end.Y);
                     Enumerable
@@ -144,7 +117,8 @@ public class Day14Solver : ISolver
                         .ToList()
                         .ForEach(e => results.Add(new Point(start.X, e)));
                 }
-                else if (start.Y == end.Y) // Horizontal
+                // Horizontal
+                else if (start.Y == end.Y) 
                 {
                     var (minX, maxX) = MinMax(start.X, end.X);
                     Enumerable
@@ -159,69 +133,92 @@ public class Day14Solver : ISolver
             }
         }
         
-        return results.ToList();
+        return new RockMap(results);
     }
     
-    private static List<Point> BuildRockMapWithFloor(IEnumerable<string> stringMap)
+    private static RockMap BuildRockMapWithFloor(IEnumerable<string> stringMap)
     {
         var result = BuildRockMap(stringMap);
         
-        // Add floor
-        var height = result.Select(e => e.Y).Max() + 2;
-        var minX = result.Select(e => e.X).Min();
-        var maxX = result.Select(e => e.X).Max();
+        // Max sand positions from start point (triangle - 90-45-45)
+        var height = result.MaxY + 2;
+        var minX = result.MinX;
+        var maxX = result.MaxX;
         for (var i = minX - height; i < maxX + height; i++)
         {
-            result.Add(new Point(i, height));
+            result.Rock.Add(new Point(i, height));
         }
         
         return result;
     }
     
-    private static Point NextPosition(
-        IEnumerable<Point> rock,
-        IEnumerable<Point> sands,
+   private static Point NextPosition(
+        RockMap rock,
+        ICollection<Point> sands,
         Point current)
     {
-        var busyPoints = rock.Concat(sands).ToArray();
-        
-        // Possible next positions coordinates
-        var p1 = new Point (current.X, current.Y + 1);       // Down
-        var p2 = new Point (current.X - 1, current.Y + 1); // Left - Down
-        var p3 = new Point (current.X + 1, current.Y + 1); // Right - Down
-        var posiblePositions = new List<Point> { p1, p2, p3 };
-        
+        var posiblePositions = GeneratePossiblePositions(current);
+
         // Can't move - sand in rest
-        if (posiblePositions.All(e => busyPoints.Contains(e)))
-            return Point.Empty;
+        var blockedPositionCount = posiblePositions.Count(rock.Rock.Contains) + posiblePositions.Count(sands.Contains);
+        if (blockedPositionCount == posiblePositions.Count)
+            return Point.Rest;
         
         // Next Position (first from possible positions list)
         foreach (var next in posiblePositions)
         {
-            if (!busyPoints.Contains(next))
-            {
-                // Block borders coords for sand
-                var minX = busyPoints.Select(e => e.X).Min();
-                var maxX = busyPoints.Select(e => e.X).Max();
-                var maxY = busyPoints.Select(e => e.Y).Max();
-                
-                // Next position outside
-                if ((next.X < minX || maxX < next.X) || next.Y > maxY)
-                {
-                    return Point.Infinity;
-                }
-                
-                return next;
-            }
+            // Position is blocked go to next position
+            if (rock.Rock.Contains(next) || sands.Contains(next)) continue;
+            
+            // Next position outside
+            if (next.X < rock.MinX || rock.MaxX < next.X || next.Y > rock.MaxY)
+                return Point.Infinity;
+            
+            return next;
+        }
+        
+        // WTF? Matrix has you
+        throw new InvalidOperationException("Broken!");
+    }
+
+   private static Point NextPositionWithFloor(
+        RockMap rock,
+        ICollection<Point> sands,
+        Point current)
+    {
+        // Possible next positions coordinates
+        var posiblePositions = GeneratePossiblePositions(current);
+        
+        // Can't move - sand in rest
+        var blockedPositionCount = posiblePositions.Count(rock.Rock.Contains) + posiblePositions.Count(sands.Contains);
+        if (blockedPositionCount == posiblePositions.Count)
+            return Point.Rest;
+        
+        // Next possible position
+        foreach (var next in posiblePositions)
+        {
+            // Position is blocked go to next position
+            if (rock.Rock.Contains(next) || sands.Contains(next)) continue;
+            
+            return next;
         }
         
         // WTF? Matrix has you
         throw new InvalidOperationException("Broken!");
     }
     
+   private static List<Point> GeneratePossiblePositions(Point current)
+   {
+       var p1 = new Point(current.X, current.Y + 1); // Down
+       var p2 = new Point(current.X - 1, current.Y + 1); // Left - Down
+       var p3 = new Point(current.X + 1, current.Y + 1); // Right - Down
+       
+       return new List<Point> { p1, p2, p3 };
+   }
+   
     private readonly record struct Point(int X, int Y)
     {
-        public static readonly Point Empty = new(-1, -1);
+        public static readonly Point Rest = new(-1, -1);
         public static readonly Point Infinity = new(-2, -2);
         
         public static Point Parse(string point)
@@ -231,94 +228,20 @@ public class Day14Solver : ISolver
             return new Point(int.Parse(coords[0]), int.Parse(coords[1]));
         }
     }
-    
-    #region Helpers
-    
-    private enum DebugMode
-    {
-        None,
-        Debug,
-        Console,
-        File
-    }
 
-    private static void RemovePlayDirectory()
+    private readonly struct RockMap
     {
-        const string play = "Play";
-        if (!Directory.Exists(play)) return;
-        var di = new DirectoryInfo(play);
-        di.Delete(true);
-    }
-    
-    private static void DrawDebugState(
-        int number,
-        ICollection<Point> rock,
-        ICollection<Point> sands,
-        Point current,
-        DebugMode debugMode)
-    {
-        switch (debugMode)
+        public ISet<Point> Rock { get; }
+        public int MinX { get; }
+        public int MaxX { get; }
+        public int MaxY { get; }
+        
+        public RockMap(ISet<Point> rock)
         {
-            case DebugMode.None:
-                return;
-            case DebugMode.Debug:
-                Debug.WriteLine($"Step: {number} Sands: {sands.Count}");
-                Debug.WriteLine(DrawMap(rock, sands, current));
-                Debug.WriteLine(string.Empty);
-                break;
-            case DebugMode.Console:
-                Console.Clear();
-                Thread.Sleep(25);
-                Console.WriteLine($"Step: {number} Sands: {sands.Count}");
-                Console.WriteLine(DrawMap(rock, sands, current));
-                Console.WriteLine(string.Empty);
-                break;
-            case DebugMode.File:
-                const string play = "Play";
-                var playDir = Path.Combine(Directory.GetCurrentDirectory(), play);
-                if (!Directory.Exists(playDir))
-                {
-                    Directory.CreateDirectory(playDir);
-                }
-                var file = Path.Combine(playDir, $"Step_{number}.txt");
-                File.WriteAllText(file, DrawMap(rock, sands, current));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(debugMode), debugMode, null);
+            Rock = rock;
+            MinX = rock.Select(e => e.X).Min();
+            MaxX = rock.Select(e => e.X).Max();
+            MaxY = rock.Select(e => e.Y).Max();
         }
     }
-    
-    private static string DrawMap(ICollection<Point> rock, ICollection<Point> sand, Point sandPosition)
-    {
-        var minX = rock.Select(e => e.X).Min();
-        var maxX = rock.Select(e => e.X).Max();
-        var maxY = rock.Select(e => e.Y).Max();
-
-        var sb = new StringBuilder();
-        for (var row = 0; row <= maxY; row++)
-        {
-            for (var col = minX; col <= maxX; col++)
-            {
-                var currentPoint = new Point(col, row);
-                if (sand.Contains(currentPoint))
-                {
-                    sb.Append('o'); // Rest sand
-                }
-                else if (currentPoint == sandPosition)
-                {
-                    sb.Append('+'); // Active sand
-                }
-                else
-                {
-                    sb.Append(rock.Contains(currentPoint) ? '#' : '.'); // Space rock or empty
-                }
-            }
-
-            sb.AppendLine(string.Empty);
-        }
-
-        return sb.ToString();
-    }
-
-    #endregion
 }
