@@ -19,6 +19,8 @@ public class Day14Solver : ISolver
 
     public string PartOne()
     {
+        return string.Empty;
+        
         var rocks = BuildRockMap(data);
         var sands = new List<Point>();
         
@@ -71,6 +73,7 @@ public class Day14Solver : ISolver
         var sands = new List<Point>();
         
         var cnt = 0; // Iterations
+        var snd = 0;
         
         // TODO
         RemovePlayDirectory();
@@ -92,6 +95,8 @@ public class Day14Solver : ISolver
             if (block.All(e => sands.Contains(e)))
             {
                 sands.Add(new Point(500,0));
+                // Visualisation TODO
+                DrawDebugState(cnt, rocks, sands, currentSandPosition, DebugMode.Console);
                 break;
             }
             
@@ -99,10 +104,6 @@ public class Day14Solver : ISolver
             while (true)
             {
                 cnt++;
-                
-                // Visualisation TODO
-                DrawDebugState(cnt, rocks, sands, currentSandPosition, DebugMode.File);
-                
                 var nextSandPosition = NextPosition(rocks, sands, currentSandPosition);
                 if (nextSandPosition == Point.Empty)
                 {
@@ -112,6 +113,11 @@ public class Day14Solver : ISolver
                 }
                 currentSandPosition = nextSandPosition;
             }
+
+            snd++;
+            
+            // Visualisation TODO
+            DrawDebugState(cnt, rocks, sands, currentSandPosition, DebugMode.Console);
         }
         
         return sands.Count.ToString();
@@ -161,13 +167,13 @@ public class Day14Solver : ISolver
         var result = BuildRockMap(stringMap);
         
         // Add floor
-        var height = result.Select(e => e.Y).Max();
+        var height = result.Select(e => e.Y).Max() + 2;
         var minX = result.Select(e => e.X).Min();
         var maxX = result.Select(e => e.X).Max();
-        Enumerable.Range(minX, maxX + 1)
-            .Select(e => new Point(e, height + 2))
-            .ToList()
-            .ForEach(e => result.Add(e));
+        for (var i = minX - height; i < maxX + height; i++)
+        {
+            result.Add(new Point(i, height));
+        }
         
         return result;
     }
@@ -262,6 +268,7 @@ public class Day14Solver : ISolver
                 break;
             case DebugMode.Console:
                 Console.Clear();
+                Thread.Sleep(25);
                 Console.WriteLine($"Step: {number} Sands: {sands.Count}");
                 Console.WriteLine(DrawMap(rock, sands, current));
                 Console.WriteLine(string.Empty);
@@ -293,13 +300,13 @@ public class Day14Solver : ISolver
             for (var col = minX; col <= maxX; col++)
             {
                 var currentPoint = new Point(col, row);
-                if (currentPoint == sandPosition)
-                {
-                    sb.Append('+'); // Active sand
-                }
-                else if (sand.Contains(currentPoint))
+                if (sand.Contains(currentPoint))
                 {
                     sb.Append('o'); // Rest sand
+                }
+                else if (currentPoint == sandPosition)
+                {
+                    sb.Append('+'); // Active sand
                 }
                 else
                 {
